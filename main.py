@@ -7,6 +7,7 @@ from tqdm import tqdm
 
 from configs import configure_argument_parser
 from constants import BASE_DIR, MAIN_DOC_URL
+from outputs import control_output
 
 
 def whats_new(session):
@@ -22,18 +23,16 @@ def whats_new(session):
     # Шаг 1-й: поиск в "супе" тега section с нужным id. Парсеру нужен только
     # первый элемент, поэтому используется метод find().
     main_div = soup.find('section', attrs={'id': 'what-s-new-in-python'})
-
     # Шаг 2-й: поиск внутри main_div следующего тега div с классом toctree-wrapper.
     # Здесь тоже нужен только первый элемент, используется метод find().
     div_with_ul = main_div.find('div', attrs={'class': 'toctree-wrapper'})
-
     # Шаг 3-й: поиск внутри div_with_ul всех элементов списка li с классом toctree-l1.
     # Нужны все теги, поэтому используется метод find_all().
     sections_by_python = div_with_ul.find_all('li',
                                               attrs={'class': 'toctree-l1'})
 
     # Печать первого найденного элемента.
-    results = []
+    results = [('Ссылка на статью', 'Заголовок', 'Редактор, автор')]
     for section in tqdm(sections_by_python):
         version_a_tag = section.find('a')
         href = version_a_tag['href']
@@ -52,9 +51,10 @@ def whats_new(session):
         )
 
     # Печать списка с данными.
-    for row in results:
-        # Распаковка каждого кортежа при печати при помощи звездочки.
-        print(*row)
+    # for row in results:
+    #     # Распаковка каждого кортежа при печати при помощи звездочки.
+    #     print(*row)
+    return results
 
 
 def latest_versions(session):
@@ -79,7 +79,7 @@ def latest_versions(session):
     else:
         raise Exception('Ничего не нашлось')
     # Список для хранения результатов.
-    results = []
+    results = [('Ссылка на документацию', 'Версия', 'Статус')]
     # Шаблон для поиска версии и статуса:
     pattern = r'Python (?P<version>\d\.\d+) \((?P<status>.*)\)'
     # Цикл для перебора тегов <a>, полученных ранее.
@@ -95,12 +95,13 @@ def latest_versions(session):
             )
         else:
             results.append(
-                (link, a_tag.text)
+                (link, a_tag.text, '')
             )
 
     # Печать результата.
-    for row in results:
-        print(*row)
+    # for row in results:
+    #     print(*row)
+    return results
 
 
 def download(session):
@@ -158,14 +159,16 @@ def main():
     if args.clear_cache:
         # Очистка кеша.
         session.cache.clear()
-
-
     # Получение из аргументов командной строки нужного режима работы.
     parser_mode = args.mode
     # Поиск и вызов нужной функции по ключу словаря.
     # results = MODE_TO_FUNCTION[parser_mode]()
     # С вызовом функции передаётся и сессия.
     results = MODE_TO_FUNCTION[parser_mode](session)
+    # Если из функции вернулись какие-то результаты,
+    if results is not None:
+        # передаём их в функцию вывода вместе с аргументами командной строки.
+        control_output(results, args)
 
 
 if __name__ == '__main__':
